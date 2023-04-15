@@ -50,6 +50,15 @@
                 <button id="button-reset" type="submit" class="btn btn-info"><i class="bi-arrow-clockwise"></i> Manual Reset</button>
             </div>
             <hr />
+            <h3>Latest available Image:</h3>
+            <div id="available-images-div">
+                <select id="available-images">
+                </select>
+            </div>
+            <div>
+                <button id="button-get-latest image" type="submit" class="btn btn-info"><i class="bi-arrow-down-circle"></i> Refresh</button>
+            </div>
+            <hr />
             <h3>Images</h3>
             <div id="image-list"></div>
             <div>
@@ -59,10 +68,6 @@
                 <button id="button-confirm" type="submit" class="btn btn-success" disabled><i class="bi-check2-square"></i> Confirm</button>
             </div>
             <hr />
-            <h3>Image Upload</h3>
-            <div class="form-group">
-                <input type="file" class="form-control" id="file-image" />
-            </div>
             <div class="image">
                 <div class="form-group">
                     <div id="file-status">Select image file (.img)</div>

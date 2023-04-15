@@ -4,6 +4,10 @@ const screens = {
     connected: document.getElementById('connected-screen')
 };
 
+const availableImages = document.getElementById('available-images');
+
+const getAvailableImagesButton = document.getElementById("button-get-latest");
+
 const deviceName = document.getElementById('device-name');
 const bleFilterConnection = document.getElementById('filter-ble-connection');
 const connectButton = document.getElementById('button-connect');
@@ -16,7 +20,6 @@ const confirmButton = document.getElementById('button-confirm');
 const imageList = document.getElementById('image-list');
 const fileInfo = document.getElementById('file-info');
 const fileStatus = document.getElementById('file-status');
-const fileImage = document.getElementById('file-image');
 const fileUpload = document.getElementById('file-upload');
 const bluetoothIsAvailable = document.getElementById('bluetooth-is-available');
 const bluetoothIsAvailableMessage = document.getElementById('bluetooth-is-available-message');
@@ -45,6 +48,76 @@ mcumgr.onConnecting(() => {
     screens.connected.style.display = 'none';
     screens.connecting.style.display = 'block';
 });
+
+availableImages.addEventListener("click", firmwareVersionSelected);
+availableImages.addEventListener("change", firmwareVersionSelected);
+
+let lastSelectedFirmware;
+
+function firmwareVersionSelected(){
+
+    // reduce number of calls on the sad proxy
+    if(availableImages.value === lastSelectedFirmware){
+        return;
+    }
+    lastSelectedFirmware = availableImages.value;
+
+    const url = "https://api.github.com/repos/Dev-Voltaic/Voltaic_Tacho_Firmware/releases/tags/" + availableImages.value;
+
+    // get the link to the bin file
+    fetch(url).then((response) => {
+        response.text().then((text) => {
+            let responseJSON = JSON.parse(text);
+
+            // go through all assets and get the first one that is a .bin file
+            responseJSON.assets.forEach((asset) => {
+                if(asset.name.endsWith(".bin")){
+                    // FUCK CORS
+                    let proxyUrl = 'https://api.codetabs.com/v1/proxy?quest=' + asset.browser_download_url;
+
+                    // download image file via cors proxy
+                    fetch(proxyUrl,
+                        {
+                            method : "GET",
+                            headers: {},
+                            // follor redirect requests!!!
+                            redirect: "follow"
+                        }).then((fileResponse) => {
+
+                            // read the image file into the mcumgr
+                            fileResponse.blob().then(fileResponseBlob => {
+                                updateSelectedFile(fileResponseBlob);
+                            });
+                    });
+                }
+            });
+        });
+    });
+}
+
+function getAvailableImages(){
+    const url = 'https://api.github.com/repos/Dev-Voltaic/Voltaic_Tacho_Firmware/releases';
+
+    // get all available releases from repo
+    fetch(url).then((response) => {
+        response.text().then((text) => {
+            let responseJSON = JSON.parse(text);
+
+            // programatically fill select
+            responseJSON.forEach((release) => {
+                const firmwareVersion = release.tag_name;
+
+                let opt = document.createElement("option");
+                opt.value = firmwareVersion;
+                opt.innerHTML = firmwareVersion; // whatever property it has
+
+                // then append it to the select element
+                availableImages.appendChild(opt);
+            });
+        });
+    });
+}
+
 mcumgr.onConnect(() => {
     deviceName.innerText = mcumgr.name;
     screens.connecting.style.display = 'none';
@@ -52,7 +125,18 @@ mcumgr.onConnect(() => {
     screens.connected.style.display = 'block';
     imageList.innerHTML = '';
     mcumgr.cmdImageState();
+
+
 });
+
+getAvailableImagesButton.addEventListener("click", ()=>{
+    // clear old available images
+    availableImages.innerHTML = "";
+
+    // get new ones
+    getAvailableImages();
+});
+
 mcumgr.onDisconnect(() => {
     deviceName.innerText = 'Connect your device';
     screens.connecting.style.display = 'none';
@@ -113,12 +197,11 @@ mcumgr.onImageUploadProgress(({ percentage }) => {
 mcumgr.onImageUploadFinished(() => {
     fileStatus.innerText = 'Upload complete';
     fileInfo.innerHTML = '';
-    fileImage.value = '';
     mcumgr.cmdImageState();
 });
 
-fileImage.addEventListener('change', () => {
-    file = fileImage.files[0];
+function updateSelectedFile(file){
+    console.log(file);
     fileData = null;
     const reader = new FileReader();
     reader.onload = async () => {
@@ -140,7 +223,8 @@ fileImage.addEventListener('change', () => {
         }
     };
     reader.readAsArrayBuffer(file);
-});
+}
+
 fileUpload.addEventListener('click', event => {
     fileUpload.disabled = true;
     event.stopPropagation();
