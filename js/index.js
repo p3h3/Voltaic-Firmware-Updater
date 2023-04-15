@@ -103,6 +103,8 @@ function getAvailableImages(){
         response.text().then((text) => {
             let responseJSON = JSON.parse(text);
 
+            availableImages.innerHTML = "";
+
             // programatically fill select
             responseJSON.forEach((release) => {
                 const firmwareVersion = release.tag_name;
@@ -216,21 +218,23 @@ mcumgr.onImageUploadFinished(async () => {
     fileInfo.innerHTML = '';
     await mcumgr.cmdImageState();
 
-    // continuation of automated upload process
+    setTimeout(async()=>{
+        // continuation of automated upload process
 
-    //TEST
-    fileStatus.innerText = 'Testing Image';
-    if (images.length > 1 && images[1].pending === false) {
-        await mcumgr.cmdImageTest(images[1].hash);
-    }
+        //TEST
+        fileStatus.innerText = 'Testing Image';
+        if (images.length > 1 && images[1].pending === false) {
+            await mcumgr.cmdImageTest(images[1].hash);
+        }
 
-    //RESET
-    fileStatus.innerText = 'Will reset shortly';
+        //RESET
+        fileStatus.innerText = 'Will reset shortly';
 
-    setTimeout(async ()=>{
-        confirmAtNextConnect = true;
-        await mcumgr.cmdReset();
-    }, 500);
+        setTimeout(async ()=>{
+            confirmAtNextConnect = true;
+            await mcumgr.cmdReset();
+        }, 1500);
+    }, 1500);
 });
 
 function updateSelectedFile(file){
@@ -314,7 +318,7 @@ fileUpload.addEventListener('click', async (event) => {
         if (fileData) {
             mcumgr.cmdUpload(fileData);
         }
-    },500);
+    },1000);
 
     // as this is not asynchronous but with a callback function
     // this shit continues in the mcumgr.onImageUploadFinished
