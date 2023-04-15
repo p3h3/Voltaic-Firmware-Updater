@@ -34,6 +34,9 @@ if (navigator && navigator.bluetooth && navigator.bluetooth.getAvailability()) {
 // default filtering yay
 bleFilterConnection.checked = true;
 
+// indicator for awaiting reconnect after mandatory reset in the auto upload process
+let confirmAtNextConnect = false;
+
 let file = null;
 let fileData = null;
 let images = [];
@@ -124,6 +127,25 @@ mcumgr.onConnect(() => {
     mcumgr.cmdImageState();
 
     getAvailableImages();
+
+    // further continuation of auto upload process
+
+    if(confirmAtNextConnect){
+        setTimeout(async ()=>{
+
+            fileStatus.innerText = 'Confirming Upload';
+
+
+            //CONFIRM
+            if (images.length > 0 && images[0].confirmed === false) {
+                await mcumgr.cmdImageConfirm(images[0].hash);
+            }
+
+            fileStatus.innerText = 'Auto update COMPLETE!';
+
+            confirmAtNextConnect = false;
+        }, 500);
+    }
 });
 
 getAvailableImagesButton.addEventListener("click", ()=>{
@@ -189,10 +211,26 @@ mcumgr.onImageUploadProgress(({ percentage }) => {
     fileStatus.innerText = `Uploading... ${percentage}%`;
 });
 
-mcumgr.onImageUploadFinished(() => {
+mcumgr.onImageUploadFinished(async () => {
     fileStatus.innerText = 'Upload complete';
     fileInfo.innerHTML = '';
-    mcumgr.cmdImageState();
+    await mcumgr.cmdImageState();
+
+    // continuation of automated upload process
+
+    //TEST
+    fileStatus.innerText = 'Testing Image';
+    if (images.length > 1 && images[1].pending === false) {
+        await mcumgr.cmdImageTest(images[1].hash);
+    }
+
+    //RESET
+    fileStatus.innerText = 'Will reset shortly';
+
+    setTimeout(async ()=>{
+        confirmAtNextConnect = true;
+        await mcumgr.cmdReset();
+    }, 500);
 });
 
 function updateSelectedFile(file){
@@ -268,25 +306,18 @@ fileUpload.addEventListener('click', async (event) => {
     fileStatus.innerText = 'Erasing';
     await mcumgr.cmdImageErase();
 
-    //UPLOAD
-    fileUpload.disabled = true;
-    event.stopPropagation();
-    if (file && fileData) {
-        mcumgr.cmdUpload(fileData);
-    }
 
-    //TEST
-    if (images.length > 1 && images[1].pending === false) {
-        await mcumgr.cmdImageTest(images[1].hash);
-    }
+    setTimeout(()=>{
+        //UPLOAD
+        fileUpload.disabled = true;
+        event.stopPropagation();
+        if (fileData) {
+            mcumgr.cmdUpload(fileData);
+        }
+    },500);
 
-    //RESET
-    await mcumgr.cmdReset();
-
-    //CONFIRM
-    if (images.length > 0 && images[0].confirmed === false) {
-        await mcumgr.cmdImageConfirm(images[0].hash);
-    }
+    // as this is not asynchronous but with a callback function
+    // this shit continues in the mcumgr.onImageUploadFinished
 });
 
 disconnectButton.addEventListener('click', async () => {
