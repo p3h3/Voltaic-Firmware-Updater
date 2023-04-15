@@ -52,20 +52,13 @@ class MCUManager {
         this._seq = 0;
         this._userRequestedDisconnect = false;
     }
-    async _requestDevice(filters) {
-        const params = {
-            acceptAllDevices: true,
-            optionalServices: [this.SERVICE_UUID]
-        };
-        if (filters) {
-            params.filters = filters;
-            params.acceptAllDevices = false;
-        }
-        return navigator.bluetooth.requestDevice(params);
+    async _requestDevice(options) {
+        options.optionalServices.push(this.SERVICE_UUID);
+        return navigator.bluetooth.requestDevice(options);
     }
-    async connect(filters) {
+    async connect(options) {
         try {
-            this._device = await this._requestDevice(filters);
+            this._device = await this._requestDevice(options);
             this._logger.info(`Connecting to device ${this.name}...`);
             this._device.addEventListener('gattserverdisconnected', async event => {
                 this._logger.info(event);

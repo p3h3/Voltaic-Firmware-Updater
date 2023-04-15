@@ -5,9 +5,8 @@ const screens = {
 };
 
 const deviceName = document.getElementById('device-name');
-const deviceNameInput = document.getElementById('device-name-input');
+const bleFilterConnection = document.getElementById('filter-ble-connection');
 const connectButton = document.getElementById('button-connect');
-const echoButton = document.getElementById('button-echo');
 const disconnectButton = document.getElementById('button-disconnect');
 const resetButton = document.getElementById('button-reset');
 const imageStateButton = document.getElementById('button-image-state');
@@ -24,22 +23,20 @@ const bluetoothIsAvailableMessage = document.getElementById('bluetooth-is-availa
 const connectBlock = document.getElementById('connect-block');
 
 if (navigator && navigator.bluetooth && navigator.bluetooth.getAvailability()) {
-    bluetoothIsAvailableMessage.innerText = 'Bluetooth is available in your browser.';
-    bluetoothIsAvailable.className = 'alert alert-success';
+    bluetoothIsAvailable.style.display = 'none';
     connectBlock.style.display = 'block';
 } else {
     bluetoothIsAvailable.className = 'alert alert-danger';
     bluetoothIsAvailableMessage.innerText = 'Bluetooth is not available in your browser.';
 }
 
+// default filtering yay
+bleFilterConnection.checked = true;
+
 let file = null;
 let fileData = null;
 let images = [];
 
-deviceNameInput.value = localStorage.getItem('deviceName');
-deviceNameInput.addEventListener('change', () => {
-    localStorage.setItem('deviceName', deviceNameInput.value);
-});
 
 const mcumgr = new MCUManager();
 mcumgr.onConnecting(() => {
@@ -153,20 +150,40 @@ fileUpload.addEventListener('click', event => {
 });
 
 connectButton.addEventListener('click', async () => {
-    let filters = null;
-    if (deviceNameInput.value) {
-        filters = [{ namePrefix: deviceNameInput.value }];
+
+    let options = {
+        optionalServices: [
+            // shared services
+            'device_information',
+
+            // BMS Services
+            "e9ea0200-e19b-482d-9293-c7907585fc48",
+            "e9ea0100-e19b-482d-9293-c7907585fc48",
+            "e9ea0400-e19b-482d-9293-c7907585fc48",
+            "e9ea0300-e19b-482d-9293-c7907585fc48",
+            "e9ea0500-e19b-482d-9293-c7907585fc48",
+
+            // Tacho Services
+            "ffd70200-fe1b-4b6d-aba1-36cc0bab3e3d",
+            "ffd70100-fe1b-4b6d-aba1-36cc0bab3e3d"
+        ]
     };
-    await mcumgr.connect(filters);
+    if(bleFilterConnection.checked) {
+        options.filters = [{
+            manufacturerData: [{
+                // nice
+                companyIdentifier: 0x6969
+            }]
+        }];
+    }else{
+        options.acceptAllDevices = true;
+    }
+
+    await mcumgr.connect(options);
 });
 
 disconnectButton.addEventListener('click', async () => {
     mcumgr.disconnect();
-});
-
-echoButton.addEventListener('click', async () => {
-    const message = prompt('Enter a text message to send', 'Hello World!');
-    await mcumgr.smpEcho(message);
 });
 
 resetButton.addEventListener('click', async () => {
