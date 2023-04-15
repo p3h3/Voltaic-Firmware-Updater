@@ -245,7 +245,7 @@ function updateSelectedFile(file){
         fileData = reader.result;
         try {
             const info = await mcumgr.imageInfo(fileData);
-            let table = `<table>`
+            let table = `<table class="table-responsive">`
             table += `<tr><th>Version</th><td>v${info.version}</td></tr>`;
             table += `<tr><th>Hash</th><td>${info.hash}</td></tr>`;
             table += `<tr><th>File Size</th><td>${fileData.byteLength} bytes</td></tr>`;
