@@ -188,7 +188,7 @@ mcumgr.onMessage(({ op, group, id, data, length }) => {
                     images.forEach(image => {
                         imagesHTML += `<div class="image ${image.active ? 'active' : 'standby'}">`;
                         imagesHTML += `<h2>Slot #${image.slot} ${image.active ? 'active' : 'standby'}</h2>`;
-                        imagesHTML += '<table>';
+                        imagesHTML += '<table class="table-responsive">';
                         const hashStr = Array.from(image.hash).map(byte => byte.toString(16).padStart(2, '0')).join('');
                         imagesHTML += `<tr><th>Version</th><td>v${image.version}</td></tr>`;
                         imagesHTML += `<tr><th>Bootable</th><td>${image.bootable}</td></tr>`;
