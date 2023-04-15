@@ -6,7 +6,8 @@ const screens = {
 
 const availableImages = document.getElementById('available-images');
 
-const getAvailableImagesButton = document.getElementById("button-get-latest");
+const getAvailableImagesButton = document.getElementById("button-get-latest-image");
+const buttonLoadImage = document.getElementById("button-load-image");
 
 const deviceName = document.getElementById('device-name');
 const bleFilterConnection = document.getElementById('filter-ble-connection');
@@ -14,9 +15,6 @@ const connectButton = document.getElementById('button-connect');
 const disconnectButton = document.getElementById('button-disconnect');
 const resetButton = document.getElementById('button-reset');
 const imageStateButton = document.getElementById('button-image-state');
-const eraseButton = document.getElementById('button-erase');
-const testButton = document.getElementById('button-test');
-const confirmButton = document.getElementById('button-confirm');
 const imageList = document.getElementById('image-list');
 const fileInfo = document.getElementById('file-info');
 const fileStatus = document.getElementById('file-status');
@@ -49,8 +47,7 @@ mcumgr.onConnecting(() => {
     screens.connecting.style.display = 'block';
 });
 
-availableImages.addEventListener("click", firmwareVersionSelected);
-availableImages.addEventListener("change", firmwareVersionSelected);
+buttonLoadImage.addEventListener("click", firmwareVersionSelected);
 
 let lastSelectedFirmware;
 
@@ -126,7 +123,7 @@ mcumgr.onConnect(() => {
     imageList.innerHTML = '';
     mcumgr.cmdImageState();
 
-
+    getAvailableImages();
 });
 
 getAvailableImagesButton.addEventListener("click", ()=>{
@@ -179,8 +176,6 @@ mcumgr.onMessage(({ op, group, id, data, length }) => {
                     });
                     imageList.innerHTML = imagesHTML;
 
-                    testButton.disabled = !(data.images.length > 1 && data.images[1].pending === false);
-                    confirmButton.disabled = !(data.images.length > 0 && data.images[0].confirmed === false);
                     break;
             }
             break;
@@ -225,14 +220,6 @@ function updateSelectedFile(file){
     reader.readAsArrayBuffer(file);
 }
 
-fileUpload.addEventListener('click', event => {
-    fileUpload.disabled = true;
-    event.stopPropagation();
-    if (file && fileData) {
-        mcumgr.cmdUpload(fileData);
-    }
-});
-
 connectButton.addEventListener('click', async () => {
 
     let options = {
@@ -266,6 +253,42 @@ connectButton.addEventListener('click', async () => {
     await mcumgr.connect(options);
 });
 
+fileUpload.addEventListener('click', async (event) => {
+
+    /*
+    Connect
+    Erase
+    Upload
+    Test
+    Reset
+    Confirm
+     */
+
+    // ERASE
+    fileStatus.innerText = 'Erasing';
+    await mcumgr.cmdImageErase();
+
+    //UPLOAD
+    fileUpload.disabled = true;
+    event.stopPropagation();
+    if (file && fileData) {
+        mcumgr.cmdUpload(fileData);
+    }
+
+    //TEST
+    if (images.length > 1 && images[1].pending === false) {
+        await mcumgr.cmdImageTest(images[1].hash);
+    }
+
+    //RESET
+    await mcumgr.cmdReset();
+
+    //CONFIRM
+    if (images.length > 0 && images[0].confirmed === false) {
+        await mcumgr.cmdImageConfirm(images[0].hash);
+    }
+});
+
 disconnectButton.addEventListener('click', async () => {
     mcumgr.disconnect();
 });
@@ -276,20 +299,4 @@ resetButton.addEventListener('click', async () => {
 
 imageStateButton.addEventListener('click', async () => {
     await mcumgr.cmdImageState();
-});
-
-eraseButton.addEventListener('click', async () => {
-    await mcumgr.cmdImageErase();
-});
-
-testButton.addEventListener('click', async () => {
-    if (images.length > 1 && images[1].pending === false) {
-        await mcumgr.cmdImageTest(images[1].hash);
-    }
-});
-
-confirmButton.addEventListener('click', async () => {
-    if (images.length > 0 && images[0].confirmed === false) {
-        await mcumgr.cmdImageConfirm(images[0].hash);
-    }
 });
